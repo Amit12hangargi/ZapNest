@@ -1,15 +1,32 @@
-import express from "express";
+import express from "express"
+import { PrismaClient } from "@prisma/client";
+
+const client = new PrismaClient();
 
 const app = express();
+app.use(express.json());
 
-// https://hooks.zapier.com/hooks/catch/24060067/u4isgb2/
-// passsword logic
-
-app.post("/hooks/catch/:userId/:zapId", (req, res) => {
+// https://hooks.zapier.com/hooks/catch/17043103/22b8496/
+// password logic
+app.post("/hooks/catch/:userId/:zapId", async (req, res) => {
     const userId = req.params.userId;
     const zapId = req.params.zapId;
+    const body = req.body;
 
-    //store in db a new trigger
+    // store in db a new trigger
+       await client.$transaction(async (tx: PrismaClient) => {
+        const run = await tx.zapRun.create({
+            data: {
+                zapId: zapId,
+                metadata: body
+            }
+        });;
 
-    //push it onto the queue(kafka/redis)
-})
+ 
+        await tx.zapRunOutbox.create({
+            data: {
+                zapRunId: run.id
+            }
+        })
+    })
+})   
